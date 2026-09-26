@@ -27,6 +27,11 @@ classifiers = [
 ]
 dependencies = []
 
+[project.urls]
+Homepage = "https://github.com/meharaj-007/oss-clarity"
+Documentation = "https://github.com/meharaj-007/oss-clarity/tree/main/docs"
+Changelog = "https://github.com/meharaj-007/oss-clarity/blob/main/CHANGELOG.md"
+
 [project.optional-dependencies]
 django = ["Django>=5.2", "rjsmin>=1.2"]
 celery = ["celery>=5.3"]
@@ -52,7 +57,8 @@ src = ["src", "tests"]
 extend-exclude = ["js/node_modules"]
 
 [tool.ruff.format]
-exclude = ["src/oss_clarity/migrations/*"]
+# Snippets in the docs are fragments, not modules.
+exclude = ["src/oss_clarity/migrations/*", "*.md"]
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "UP", "B", "SIM"]

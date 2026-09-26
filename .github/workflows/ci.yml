@@ -1,0 +1,132 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - run: pip install "ruff>=0.6"
+      - run: ruff check .
+      - run: ruff format --check .
+
+  # The core library must install and pass its tests with Django absent.
+  core:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ["3.11", "3.14"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - run: pip install -e . pytest
+      - name: Django is not installed
+        run: python -c "import importlib.util, sys; sys.exit(importlib.util.find_spec('django') is not None)"
+      - run: pytest -q
+
+  django:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { django: "5.2", python: "3.11", db: sqlite }
+          - { django: "5.2", python: "3.12", db: sqlite }
+          - { django: "5.2", python: "3.13", db: sqlite }
+          - { django: "5.2", python: "3.14", db: sqlite }
+          - { django: "5.2", python: "3.14", db: postgres }
+          - { django: "6.0", python: "3.12", db: sqlite }
+          - { django: "6.0", python: "3.13", db: sqlite }
+          - { django: "6.0", python: "3.14", db: sqlite }
+          - { django: "6.0", python: "3.14", db: postgres }
+          - { django: "6.1", python: "3.12", db: sqlite }
+          - { django: "6.1", python: "3.13", db: sqlite }
+          - { django: "6.1", python: "3.14", db: sqlite }
+          - { django: "6.1", python: "3.14", db: postgres }
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: oc
+          POSTGRES_PASSWORD: oc
+          POSTGRES_DB: oc
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd pg_isready --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      DATABASE_URL: ${{ matrix.db == 'postgres' && 'postgres://oc:oc@localhost:5432/oc' || '' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      # The tracker tests run the served tracker in Node.
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+      - run: pip install -e ".[django,celery]" "Django~=${{ matrix.django }}.0" pytest pytest-django
+      - if: matrix.db == 'postgres'
+        run: pip install "psycopg[binary]>=3.2"
+      - run: python -m django --version
+      - run: pytest -q
+      - name: The example project passes its checks
+        working-directory: example
+        run: python manage.py check
+      - name: Migrations match the models
+        run: >-
+          PYTHONPATH=. DJANGO_SETTINGS_MODULE=tests.django.settings
+          django-admin makemigrations oss_clarity --check --dry-run
+
+  # The committed bundles must be exactly what the lockfile builds.
+  js:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: js
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: js/package-lock.json
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm run build
+      - name: Committed bundles match a fresh build
+        run: git diff --exit-code -- ../src/oss_clarity/static
+
+  package:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - run: pip install build
+      - run: python -m build
+      - name: The wheel carries the bundles, migrations, templates and notices
+        run: |
+          unzip -l dist/*.whl > contents.txt
+          for f in static/oss_clarity/recorder.js static/oss_clarity/player.js \
+                   static/oss_clarity/player.css migrations/0001_initial.py \
+                   templates/admin/oss_clarity/site/heatmap.html THIRD_PARTY_NOTICES.md; do
+            grep -q "$f" contents.txt || { echo "missing from wheel: $f"; exit 1; }
+          done

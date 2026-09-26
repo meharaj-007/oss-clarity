@@ -21,3 +21,8 @@ node_modules/
 .idea/
 .vscode/
 .DS_Store
+
+# Example project
+example/db.sqlite3
+example/media/
+example/.cache/

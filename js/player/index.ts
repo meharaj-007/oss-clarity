@@ -98,6 +98,40 @@ function fit(replayer: Replayer, stage: HTMLElement, width: number, height: numb
   stage.style.height = `${Math.ceil(height * scale)}px`;
 }
 
+/**
+ * Remove inline event handlers (`onclick`, `onsubmit`...) from recorded
+ * nodes. The replay iframe runs no scripts anyway; this is a second layer,
+ * and it keeps the browser from logging every blocked handler.
+ */
+type Serialized = { attributes?: Record<string, unknown>; childNodes?: Serialized[] };
+
+function stripHandlers(node: Serialized | undefined): void {
+  if (!node) return;
+  if (node.attributes) {
+    for (const name of Object.keys(node.attributes)) {
+      if (/^on/i.test(name)) delete node.attributes[name];
+    }
+  }
+  for (const child of node.childNodes ?? []) stripHandlers(child);
+}
+
+function sanitize(events: eventWithTime[]): eventWithTime[] {
+  for (const event of events) {
+    const data = event.data as {
+      node?: Serialized;
+      source?: number;
+      adds?: { node: Serialized }[];
+      attributes?: { attributes: Record<string, unknown> }[];
+    };
+    if (event.type === 2) stripHandlers(data.node);
+    else if (event.type === 3 && data.source === 0) {
+      for (const add of data.adds ?? []) stripHandlers(add.node);
+      for (const change of data.attributes ?? []) stripHandlers(change);
+    }
+  }
+  return events;
+}
+
 // ---------------------------------------------------------------------------
 // Replay
 // ---------------------------------------------------------------------------
@@ -122,7 +156,7 @@ async function mountReplay(root: HTMLElement): Promise<void> {
     fail(root, `The replay could not be loaded (${(error as Error).message}).`);
     return;
   }
-  events.sort((a, b) => a.timestamp - b.timestamp);
+  events = sanitize(events).sort((a, b) => a.timestamp - b.timestamp);
   if (events.length < 2 || !events.some((e) => e.type === 2)) {
     fail(root, "This recording has no replayable page yet.");
     return;
@@ -328,18 +362,27 @@ function hslToRgb(h: number, s: number, l: number): [number, number, number] {
   ];
 }
 
+function nextFrame(): Promise<void> {
+  return new Promise((done) => requestAnimationFrame(() => done()));
+}
+
 async function buildBackdrop(
   stage: HTMLElement,
   url: string,
 ): Promise<{ doc: Document; width: number; height: number; replayer: Replayer } | null> {
   const body = await getJson<{ events: eventWithTime[] }>(url);
-  const events = body.events.sort((a, b) => a.timestamp - b.timestamp);
+  const events = sanitize(body.events).sort((a, b) => a.timestamp - b.timestamp);
   if (!events.some((e) => e.type === 2)) return null;
   const replayer = new Replayer(events, { root: stage, showWarning: false, mouseTail: false });
   // The last state of the page: every mutation applied.
   replayer.pause(replayer.getMetaData().totalTime);
   const doc = replayer.iframe.contentDocument;
   if (!doc) return null;
+  // Measure only once the rebuilt page has been laid out: before that every
+  // box is empty and the document is one viewport tall.
+  replayer.iframe.style.display = "inherit";
+  await nextFrame();
+  await nextFrame();
   const width = replayer.iframe.width ? Number(replayer.iframe.width) : doc.documentElement.clientWidth;
   const height = Math.max(
     doc.documentElement.scrollHeight,

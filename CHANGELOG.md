@@ -44,4 +44,9 @@
   list, and a heatmap page per site (page, device and range pickers; click and scroll-depth
   maps drawn over the newest recorded snapshot of that page). Built from `js/player` on
   rrweb's replayer, sandboxed without scripts.
+- The replay strips inline event handlers from recorded pages, and the heatmap
+  measures the rebuilt page only after it has been laid out.
+- Documentation (`docs/`), a README with the privacy stance, an example project, and CI
+  for lint, the core without Django, the Django × Python matrix on SQLite and PostgreSQL,
+  bundle reproducibility and the wheel's contents.
 

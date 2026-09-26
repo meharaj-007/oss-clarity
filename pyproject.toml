@@ -18,11 +18,16 @@ classifiers = [
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
     "Programming Language :: Python :: 3.14",
+    "Framework :: Django",
+    "Framework :: Django :: 5.2",
+    "Framework :: Django :: 6.0",
+    "Framework :: Django :: 6.1",
 ]
 dependencies = []
 
 [project.optional-dependencies]
-dev = ["pytest>=8", "ruff>=0.6", "build>=1"]
+django = ["Django>=5.2", "rjsmin>=1.2"]
+dev = ["pytest>=8", "pytest-django>=4.9", "ruff>=0.6", "build>=1"]
 
 [tool.hatch.version]
 path = "src/oss_clarity/__init__.py"
@@ -32,6 +37,9 @@ packages = ["src/oss_clarity"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+DJANGO_SETTINGS_MODULE = "tests.django.settings"
+django_find_project = false
+pythonpath = ["."]
 
 [tool.ruff]
 line-length = 100
@@ -40,3 +48,7 @@ src = ["src", "tests"]
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "UP", "B", "SIM"]
+
+[tool.ruff.lint.isort]
+# `tests/django` is the test project, not the framework.
+known-third-party = ["django"]

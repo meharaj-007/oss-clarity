@@ -1,6 +1,8 @@
 # Changelog
 
-## Unreleased
+## 0.1.0 — 2026-09-26
+
+First release.
 
 - `oss_clarity.core`: rules-based signal analysis of rrweb recordings (`analyze`), frozen
   `Thresholds`, quick backs and loops from page views (`navigation`), a user-agent classifier

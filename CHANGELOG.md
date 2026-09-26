@@ -11,3 +11,18 @@
 - `OSS_CLARITY` settings dict with defaults for every key, checked by `manage.py check`.
 - Admin: sites with their recording settings and refusal counters, read-only hits, recordings
   filterable by signal, favourites, and job runs.
+- Public collector (`oss_clarity.urls.public`): the tracker script per site, the recorder
+  bundle under a content digest, page views, clicks and page leaves, and recording chunks
+  (gzip accepted). Host allow-list, crawler refusal for recordings, sampling by session-id
+  hash, size and session caps, and per-address, per-site and global rate limits. Every
+  refusal answers 204.
+- Client IP for rate limits resolved by `TRUSTED_PROXY_COUNT`, `CLIENT_IP_HEADER` or
+  `CLIENT_IP_FUNCTION`; used in memory only.
+- The tracker honours Global Privacy Control for recording, supports a consent gate, and
+  exposes `ossClarity("visitorId")` and `ossClarity("forget")`. Clicks carry position and a
+  selector only; credential-shaped query values are redacted before any URL is stored.
+- Recorder bundle built from `js/recorder` with esbuild; third-party notices in
+  `THIRD_PARTY_NOTICES.md`.
+- Optional `PublicEndpointsMiddleware` for hosts whose CORS or cache middleware would
+  override the public endpoints' headers.
+

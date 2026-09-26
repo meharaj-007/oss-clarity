@@ -18,6 +18,7 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
+    "oss_clarity.middleware.PublicEndpointsMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
@@ -63,3 +64,5 @@ STORAGES = {
     "staticfiles": {"BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage"},
 }
 STATIC_URL = "/static/"
+
+CACHES = {"default": {"BACKEND": "django.core.cache.backends.locmem.LocMemCache"}}

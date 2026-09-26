@@ -42,7 +42,22 @@ def test_every_page_opens(admin_client, site, recording):
     assert admin_client.get(detail).status_code == 200
 
 
-def test_the_snippet_waits_for_the_public_urls(admin_client, site):
+def test_the_site_page_shows_its_snippet(admin_client, site):
+    page = admin_client.get(reverse("admin:oss_clarity_site_change", args=[site.pk]))
+    expected = f"http://testserver/oc/t/{site.public_key}.js"
+    assert (
+        f"&lt;script async src=&quot;{expected}&quot;&gt;&lt;/script&gt;" in page.content.decode()
+    )
+
+
+def test_the_snippet_uses_the_public_base_url_when_set(admin_client, site, settings):
+    settings.OSS_CLARITY = {"PUBLIC_BASE_URL": "https://collect.example.net/"}
+    page = admin_client.get(reverse("admin:oss_clarity_site_change", args=[site.pk]))
+    assert f"https://collect.example.net/oc/t/{site.public_key}.js" in page.content.decode()
+
+
+def test_the_snippet_waits_for_the_public_urls(admin_client, site, settings):
+    settings.ROOT_URLCONF = "tests.django.urls_admin_only"
     page = admin_client.get(reverse("admin:oss_clarity_site_change", args=[site.pk]))
     assert "Include oss_clarity.urls.public" in page.content.decode()
 

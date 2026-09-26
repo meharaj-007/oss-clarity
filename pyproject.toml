@@ -9,6 +9,8 @@ description = "Self-hosted session replay, heatmaps and rules-based behaviour si
 readme = "README.md"
 requires-python = ">=3.11"
 license = "MIT"
+# The recorder bundle ships in the wheel, so its notices ship with it.
+license-files = ["LICENSE", "THIRD_PARTY_NOTICES.md"]
 authors = [{ name = "Meharaj Ul Mahmmud" }]
 keywords = ["session-replay", "heatmaps", "rrweb", "django", "analytics", "privacy"]
 classifiers = [
@@ -45,9 +47,18 @@ pythonpath = ["."]
 line-length = 100
 target-version = "py311"
 src = ["src", "tests"]
+extend-exclude = ["js/node_modules"]
+
+[tool.ruff.format]
+exclude = ["src/oss_clarity/migrations/*"]
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "UP", "B", "SIM"]
+
+[tool.ruff.lint.per-file-ignores]
+# Generated migrations, and JavaScript held in a Python string.
+"src/oss_clarity/migrations/*" = ["E501"]
+"src/oss_clarity/tracker.py" = ["E501"]
 
 [tool.ruff.lint.isort]
 # `tests/django` is the test project, not the framework.

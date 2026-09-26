@@ -185,9 +185,9 @@ class Hit(TimestampedModel):
     # window `viewport_w` wide; `rel_x`/`rel_y` are where inside the clicked
     # element, in thousandths of its box, which keeps a heatmap on the right
     # element when the page reflows.
+    #: A short path to the clicked element. Its text and link are never
+    #: collected: a heatmap needs where, not what.
     element_selector = models.CharField(max_length=255, blank=True, default="")
-    element_text = models.CharField(max_length=200, blank=True, default="")
-    element_href = models.TextField(blank=True, default="")
     #: The landmark around a click (`header`, `nav`, `main`, `aside`, `footer`).
     page_region = models.CharField(max_length=64, blank=True, default="")
     x = models.IntegerField(null=True, blank=True)

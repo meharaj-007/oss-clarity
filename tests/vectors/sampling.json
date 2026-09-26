@@ -1,0 +1,50 @@
+{
+  "description": "32-bit FNV-1a over a session id's characters; bucket = hash mod 100. The collector (oss_clarity.core.sampling.fnv1a32) and the tracker (fnv1a in oss_clarity.tracker.TRACKER_JS) must both reproduce every entry. Session ids are ASCII letters, digits and dashes; anything else is refused before hashing.",
+  "vectors": [
+    {
+      "session_id": "",
+      "hash": 2166136261,
+      "bucket": 61
+    },
+    {
+      "session_id": "a",
+      "hash": 3826002220,
+      "bucket": 20
+    },
+    {
+      "session_id": "0b7f5c2e-4d1a-4c2b-9e8f-3a6d5c4b2a10",
+      "hash": 425498992,
+      "bucket": 92
+    },
+    {
+      "session_id": "1767225600000-k3j9x2m1qz",
+      "hash": 4102903586,
+      "bucket": 86
+    },
+    {
+      "session_id": "A-Z-a-z-0-9",
+      "hash": 2453373909,
+      "bucket": 9
+    },
+    {
+      "session_id": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+      "hash": 3516603077,
+      "bucket": 77
+    },
+    {
+      "session_id": "s-90",
+      "hash": 1627312500,
+      "bucket": 0
+    },
+    {
+      "session_id": "s-34",
+      "hash": 3776421850,
+      "bucket": 50
+    },
+    {
+      "session_id": "s-242",
+      "hash": 2931064699,
+      "bucket": 99
+    }
+  ]
+}

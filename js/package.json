@@ -1,0 +1,20 @@
+{
+  "name": "oss-clarity-js",
+  "private": true,
+  "description": "Sources for the oss-clarity recorder bundle. Never published.",
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "build": "node recorder/build.mjs",
+    "typecheck": "tsc --noEmit -p .",
+    "test": "node --test tests/"
+  },
+  "dependencies": {
+    "@rrweb/record": "2.1.6",
+    "@rrweb/types": "2.1.6"
+  },
+  "devDependencies": {
+    "esbuild": "0.28.2",
+    "typescript": "5.9.3"
+  }
+}

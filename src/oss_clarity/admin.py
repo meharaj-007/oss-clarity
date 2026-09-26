@@ -3,12 +3,15 @@ here: they are written by the collector and the jobs, never by hand."""
 
 from __future__ import annotations
 
+from contextvars import ContextVar
+
 from django.contrib import admin
 from django.urls import NoReverseMatch, reverse
 from django.utils.html import format_html
 
 from .conf import settings
 from .models import SIGNAL_COLUMNS, Hit, JobRun, Recording, RecordingSettings, Site
+from .tracker import snippet_for
 
 
 class ReadOnlyAdmin(admin.ModelAdmin):
@@ -26,15 +29,22 @@ class RecordingSettingsInline(admin.StackedInline):
     max_num = 1
 
 
-def tracker_url(site: Site) -> str | None:
-    """Where the site's tracker is served, or None before the public URLs
-    are included in the host's URLconf."""
+#: The request being rendered, so a read-only field can build an absolute URL.
+_current_request: ContextVar = ContextVar("oss_clarity_admin_request", default=None)
+
+
+def tracker_url(site: Site, request=None) -> str | None:
+    """The absolute URL the site's tracker is served from, or None before the
+    public URLs are included in the host's URLconf. `PUBLIC_BASE_URL` when
+    set, otherwise the host the admin is being viewed on."""
     try:
         path = reverse("oss_clarity_public:tracker", args=[site.public_key])
     except NoReverseMatch:
         return None
     base = (settings.PUBLIC_BASE_URL or "").rstrip("/")
-    return f"{base}{path}"
+    if base:
+        return f"{base}{path}"
+    return request.build_absolute_uri(path) if request is not None else path
 
 
 @admin.register(Site)
@@ -77,14 +87,24 @@ class SiteAdmin(admin.ModelAdmin):
     )
 
     @admin.display(description="Snippet")
+    def changeform_view(self, request, *args, **kwargs):
+        token = _current_request.set(request)
+        try:
+            response = super().changeform_view(request, *args, **kwargs)
+            # Rendered here, while the request is known, not lazily later.
+            if hasattr(response, "render") and not getattr(response, "is_rendered", True):
+                response.render()
+            return response
+        finally:
+            _current_request.reset(token)
+
     def install_snippet(self, site: Site) -> str:
         if not site.pk:
             return "Save the site to get its snippet."
-        url = tracker_url(site)
+        url = tracker_url(site, _current_request.get())
         if url is None:
             return "Include oss_clarity.urls.public in your URLconf to get the snippet."
-        snippet = f'<script async src="{url}"></script>'
-        return format_html("<code>{}</code>", snippet)
+        return format_html("<code>{}</code>", snippet_for(url))
 
 
 class SignalFilter(admin.SimpleListFilter):

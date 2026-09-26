@@ -25,4 +25,15 @@
   `THIRD_PARTY_NOTICES.md`.
 - Optional `PublicEndpointsMiddleware` for hosts whose CORS or cache middleware would
   override the public endpoints' headers.
+- Background jobs in `oss_clarity.jobs`: finalize and analyse quiet recordings, store visits'
+  quick backs and loops, roll up heatmaps per UTC day, and prune by retention window. Each
+  run is claimed in `JobRun` with one conditional update, so overlapping runs never repeat
+  a job. Run them with `manage.py oss_clarity_run_jobs` from cron, or the optional Celery
+  tasks and `BEAT_SCHEDULE` in `oss_clarity.tasks`.
+- Visitor erasure: `retention.erase_visitor`, `manage.py oss_clarity_erase_visitor` and an
+  admin action. Stored chunks are always deleted before rows; a failed delete keeps the rows
+  for the next run.
+- `manage.py oss_clarity_measure` reports how many signals each threshold setting would
+  find, with moments to watch. It writes nothing.
+- Recordings can be deleted from the admin, stored chunks first.
 

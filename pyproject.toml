@@ -29,7 +29,9 @@ dependencies = []
 
 [project.optional-dependencies]
 django = ["Django>=5.2", "rjsmin>=1.2"]
-dev = ["pytest>=8", "pytest-django>=4.9", "ruff>=0.6", "build>=1"]
+celery = ["celery>=5.3"]
+s3 = ["django-storages[s3]>=1.14"]
+dev = ["pytest>=8", "pytest-django>=4.9", "ruff>=0.6", "build>=1", "celery>=5.3"]
 
 [tool.hatch.version]
 path = "src/oss_clarity/__init__.py"

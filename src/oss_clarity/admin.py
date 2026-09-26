@@ -5,12 +5,13 @@ from __future__ import annotations
 
 from contextvars import ContextVar
 
-from django.contrib import admin
+from django.contrib import admin, messages
 from django.urls import NoReverseMatch, reverse
 from django.utils.html import format_html
 
 from .conf import settings
 from .models import SIGNAL_COLUMNS, Hit, JobRun, Recording, RecordingSettings, Site
+from .retention import delete_recording, erase_visitor
 from .tracker import snippet_for
 
 
@@ -134,12 +135,44 @@ class RecordingAdmin(ReadOnlyAdmin):
     date_hierarchy = "started_at"
     search_fields = ("session_id", "visitor_id")
     list_select_related = ("site",)
-    actions = ["mark_favorite", "unmark_favorite"]
+    actions = ["mark_favorite", "unmark_favorite", "erase_visitors", "delete_selected"]
 
     def has_delete_permission(self, request, obj=None) -> bool:
-        # Deleting must also delete the stored chunks; that arrives with the
-        # storage layer. Until then rows are removed only by retention.
-        return False
+        return admin.ModelAdmin.has_delete_permission(self, request, obj)
+
+    # Deleting goes through retention, which removes the stored chunks first
+    # and keeps the rows if any chunk could not be removed.
+    def delete_model(self, request, obj: Recording) -> None:
+        if not delete_recording(obj):
+            self.message_user(
+                request, "Its stored chunks could not be deleted; try again.", messages.ERROR
+            )
+
+    def delete_queryset(self, request, queryset) -> None:
+        kept = sum(0 if delete_recording(recording) else 1 for recording in queryset)
+        if kept:
+            self.message_user(
+                request,
+                f"{kept} recordings kept: their stored chunks could not be deleted; try again.",
+                messages.ERROR,
+            )
+
+    @admin.action(description="Erase these visitors everywhere", permissions=["delete"])
+    def erase_visitors(self, request, queryset) -> None:
+        visitors = {v for v in queryset.values_list("visitor_id", flat=True) if v}
+        totals = {"recordings": 0, "hits": 0, "navigation": 0, "failed": 0}
+        for visitor_id in visitors:
+            for key, value in erase_visitor(visitor_id).items():
+                if key in totals:
+                    totals[key] += value
+        level = messages.ERROR if totals["failed"] else messages.SUCCESS
+        self.message_user(
+            request,
+            f"Erased {len(visitors)} visitors: {totals['recordings']} recordings, "
+            f"{totals['hits']} hits, {totals['navigation']} navigation rows"
+            + (f"; {totals['failed']} recordings kept, try again" if totals["failed"] else "."),
+            level,
+        )
 
     @admin.action(description="Keep as favourite")
     def mark_favorite(self, request, queryset) -> None:

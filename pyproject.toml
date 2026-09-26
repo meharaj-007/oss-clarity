@@ -1,0 +1,42 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "oss-clarity"
+dynamic = ["version"]
+description = "Self-hosted session replay, heatmaps and rules-based behaviour signals for Django"
+readme = "README.md"
+requires-python = ">=3.11"
+license = "MIT"
+authors = [{ name = "Meharaj Ul Mahmmud" }]
+keywords = ["session-replay", "heatmaps", "rrweb", "django", "analytics", "privacy"]
+classifiers = [
+    "Development Status :: 2 - Pre-Alpha",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+]
+dependencies = []
+
+[project.optional-dependencies]
+dev = ["pytest>=8", "ruff>=0.6", "build>=1"]
+
+[tool.hatch.version]
+path = "src/oss_clarity/__init__.py"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/oss_clarity"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP", "B", "SIM"]

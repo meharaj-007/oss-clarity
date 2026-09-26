@@ -1,0 +1,23 @@
+# Private build brief — never committed.
+PLAN.md
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+build/
+dist/
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# JS
+node_modules/
+
+# Editors and OS
+.idea/
+.vscode/
+.DS_Store

@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.1.1 — 2026-09-26
+
+Fixed
+
+- The recorder lost the events buffered when a page was hidden or closed: it compressed
+  the last chunk before sending it, and a page going away gets no further turn for the
+  compression to finish. Up to five seconds at the end of every page were missing, and a
+  page left within five seconds of loading was missing from its recording altogether. The
+  recorder now sends as soon as the page is hidden or closed, uncompressed, in parts that fit
+  the browser's 64 KB keepalive budget. Chunks sent while the page stays open are still
+  gzipped. The recorder's URL carries a new digest, so browsers fetch the fixed bundle.
+- The example page sets its own background, so it stays readable when the browser prefers a
+  dark colour scheme.
+
+Added
+
+- `npm test` in `js/`: the recorder's uploads, run in Node with rrweb stubbed out. CI runs it.
+
 ## 0.1.0 — 2026-09-26
 
 First release.

@@ -8,7 +8,7 @@ marks where people struggled: rage clicks, dead clicks, hesitations, form
 abandons and more. You watch the replays and heatmaps in your Django admin. Every
 byte stays on your servers.
 
-> Early release (0.1.0). Not yet published to PyPI: install from a GitHub tag.
+> Early release (0.1.1). Not yet published to PyPI: install from a GitHub tag.
 > Settings and the JSON API may still change.
 
 ![A replay in the Django admin, with signals on the timeline](docs/images/replay.png)
@@ -56,11 +56,11 @@ byte stays on your servers.
 ## Install
 
 ```sh
-pip install "oss-clarity[django] @ git+https://github.com/meharaj-007/oss-clarity@v0.1.0"
+pip install "oss-clarity[django] @ git+https://github.com/meharaj-007/oss-clarity@v0.1.1"
 ```
 
 Or download the wheel from the
-[v0.1.0 release](https://github.com/meharaj-007/oss-clarity/releases/tag/v0.1.0).
+[v0.1.1 release](https://github.com/meharaj-007/oss-clarity/releases/tag/v0.1.1).
 
 Python 3.11 to 3.14, Django 5.2, 6.0 and 6.1, SQLite or PostgreSQL.
 

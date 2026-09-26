@@ -1,0 +1,6 @@
+{% extends "admin/change_form.html" %}
+
+{% block object-tools-items %}
+  {% if oc_heatmap_url %}<li><a href="{{ oc_heatmap_url }}">Heatmap</a></li>{% endif %}
+  {{ block.super }}
+{% endblock %}

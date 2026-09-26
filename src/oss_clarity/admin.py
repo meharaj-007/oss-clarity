@@ -4,15 +4,30 @@ here: they are written by the collector and the jobs, never by hand."""
 from __future__ import annotations
 
 from contextvars import ContextVar
+from urllib.parse import urlencode
 
+import django
 from django.contrib import admin, messages
-from django.urls import NoReverseMatch, reverse
+from django.core.exceptions import PermissionDenied
+from django.http import Http404, JsonResponse
+from django.shortcuts import get_object_or_404
+from django.template.response import TemplateResponse
+from django.urls import NoReverseMatch, path, reverse
 from django.utils.html import format_html
 
+from . import heatmaps, reading
+from .choices import DeviceClass
 from .conf import settings
 from .models import SIGNAL_COLUMNS, Hit, JobRun, Recording, RecordingSettings, Site
 from .retention import delete_recording, erase_visitor
 from .tracker import snippet_for
+
+
+def _days(request) -> int:
+    try:
+        return max(1, min(int(request.GET.get("days", 30)), 400))
+    except (TypeError, ValueError):
+        return 30
 
 
 class ReadOnlyAdmin(admin.ModelAdmin):
@@ -86,6 +101,81 @@ class SiteAdmin(admin.ModelAdmin):
         ),
         (None, {"fields": ("created_at", "updated_at")}),
     )
+
+    def get_urls(self):
+        extra = [
+            path(
+                "<int:site_id>/heatmap/",
+                self.admin_site.admin_view(self.heatmap_view),
+                name="oss_clarity_site_heatmap",
+            ),
+            path(
+                "<int:site_id>/heatmap.json",
+                self.admin_site.admin_view(self.heatmap_data),
+                name="oss_clarity_site_heatmap_data",
+            ),
+        ]
+        return extra + super().get_urls()
+
+    def _viewable(self, request, site_id) -> Site:
+        site = get_object_or_404(Site, pk=site_id)
+        if not self.has_view_permission(request, site):
+            raise PermissionDenied
+        return site
+
+    def heatmap_view(self, request, site_id):
+        site = self._viewable(request, site_id)
+        days = _days(request)
+        pages = heatmaps.pages_summary(site, days=days)
+        path_ = request.GET.get("path") or (pages[0]["path"] if pages else "")
+        device = request.GET.get("device") or ""
+        if device not in DeviceClass.values:
+            chosen = next((p for p in pages if p["path"] == path_), None)
+            devices = chosen["devices"] if chosen else {}
+            device = max(devices, key=devices.get) if devices else DeviceClass.DESKTOP
+        data_url = ""
+        if path_:
+            query = urlencode({"path": path_, "device": device, "days": days})
+            data_url = reverse("admin:oss_clarity_site_heatmap_data", args=[site.pk]) + "?" + query
+        context = {
+            **self.admin_site.each_context(request),
+            "title": f"Heatmap: {site}",
+            "opts": self.model._meta,
+            "original": site,
+            "site_obj": site,
+            "pages": pages,
+            "path": path_,
+            "device": device,
+            "devices": DeviceClass.choices,
+            "days": days,
+            "day_choices": (7, 30, 90, 400),
+            "data_url": data_url,
+            # Django 6 lists breadcrumbs; 5.2 writes them as one line.
+            "oc_list_breadcrumbs": django.VERSION >= (6, 0),
+        }
+        return TemplateResponse(request, "admin/oss_clarity/site/heatmap.html", context)
+
+    def heatmap_data(self, request, site_id):
+        site = self._viewable(request, site_id)
+        device = request.GET.get("device") or DeviceClass.DESKTOP
+        if device not in DeviceClass.values:
+            raise Http404("Unknown device class.")
+        data = heatmaps.heatmap(
+            site, path=request.GET.get("path") or "/", device=device, days=_days(request)
+        )
+        if data["backdrop"]:
+            data["backdrop"]["events_url"] = reverse(
+                "admin:oss_clarity_recording_events",
+                args=[data["backdrop"]["recording"], data["backdrop"]["page_seq"]],
+            )
+        return JsonResponse(data)
+
+    def change_view(self, request, object_id, form_url="", extra_context=None):
+        extra_context = {
+            **(extra_context or {}),
+            "oc_heatmap_url": reverse("admin:oss_clarity_site_heatmap", args=[object_id]),
+        }
+        return super().change_view(request, object_id, form_url, extra_context)
 
     @admin.display(description="Snippet")
     def changeform_view(self, request, *args, **kwargs):
@@ -173,6 +263,48 @@ class RecordingAdmin(ReadOnlyAdmin):
             + (f"; {totals['failed']} recordings kept, try again" if totals["failed"] else "."),
             level,
         )
+
+    def get_urls(self):
+        extra = [
+            path(
+                "<uuid:recording_id>/replay.json",
+                self.admin_site.admin_view(self.replay_data),
+                name="oss_clarity_recording_replay",
+            ),
+            path(
+                "<uuid:recording_id>/pages/<int:page_seq>/events.json",
+                self.admin_site.admin_view(self.page_events_data),
+                name="oss_clarity_recording_events",
+            ),
+        ]
+        return extra + super().get_urls()
+
+    def _viewable(self, request, recording_id) -> Recording:
+        recording = get_object_or_404(Recording, pk=recording_id)
+        if not self.has_view_permission(request, recording):
+            raise PermissionDenied
+        return recording
+
+    def replay_data(self, request, recording_id):
+        recording = self._viewable(request, recording_id)
+
+        def events_url(page_seq: int) -> str:
+            return reverse("admin:oss_clarity_recording_events", args=[recording.pk, page_seq])
+
+        return JsonResponse(reading.recording_detail(recording, events_url))
+
+    def page_events_data(self, request, recording_id, page_seq):
+        events = reading.events_for_page(self._viewable(request, recording_id), page_seq)
+        if events is None:
+            raise Http404("No such page.")
+        return JsonResponse({"events": events})
+
+    def change_view(self, request, object_id, form_url="", extra_context=None):
+        extra_context = {
+            **(extra_context or {}),
+            "oc_replay_url": reverse("admin:oss_clarity_recording_replay", args=[object_id]),
+        }
+        return super().change_view(request, object_id, form_url, extra_context)
 
     @admin.action(description="Keep as favourite")
     def mark_favorite(self, request, queryset) -> None:

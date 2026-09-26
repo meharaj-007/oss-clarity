@@ -106,3 +106,62 @@ def test_recordings_can_be_favourited_but_not_edited(admin_client, recording):
     assert recording.is_favorite
     add = admin_client.get(reverse("admin:oss_clarity_recording_add"))
     assert add.status_code == 403
+
+
+def test_the_recording_page_embeds_the_player(admin_client, recording):
+    page = admin_client.get(reverse("admin:oss_clarity_recording_change", args=[recording.pk]))
+    html = page.content.decode()
+    replay_url = reverse("admin:oss_clarity_recording_replay", args=[recording.pk])
+    assert f'data-oss-clarity-replay="{replay_url}"' in html
+    assert "oss_clarity/player.js" in html and "oss_clarity/player.css" in html
+
+
+def test_the_admin_serves_the_replay_data(admin_client, site):
+    from .conftest import make_recording
+
+    recording = make_recording(site, pages=[("p-0", [{"type": 2, "timestamp": 1_000}])])
+    data = admin_client.get(reverse("admin:oss_clarity_recording_replay", args=[recording.pk]))
+    page = data.json()["pages"][0]
+    assert page["events_url"] == reverse(
+        "admin:oss_clarity_recording_events", args=[recording.pk, 0]
+    )
+    assert admin_client.get(page["events_url"]).json() == {
+        "events": [{"type": 2, "timestamp": 1_000}]
+    }
+
+
+def test_the_replay_data_needs_view_permission(client, site):
+    from django.contrib.auth import get_user_model
+
+    from .conftest import make_recording
+
+    recording = make_recording(site)
+    user = get_user_model().objects.create_user("nobody", password="x", is_staff=True)
+    client.force_login(user)
+    url = reverse("admin:oss_clarity_recording_replay", args=[recording.pk])
+    assert client.get(url).status_code == 403
+
+
+def test_the_heatmap_page_picks_the_busiest_page_and_its_main_device(admin_client, site):
+    from oss_clarity.heatmaps import rollup_day
+
+    from .conftest import make_hit
+
+    make_hit(site, path="/pricing", device_class="mobile")
+    make_hit(site, path="/pricing", device_class="mobile")
+    make_hit(site, path="/about")
+    rollup_day(site.pk, timezone.now().date())
+    page = admin_client.get(reverse("admin:oss_clarity_site_heatmap", args=[site.pk]))
+    html = page.content.decode()
+    assert page.status_code == 200
+    assert 'data-oss-clarity-heatmap="' in html and "path=%2Fpricing&amp;device=mobile" in html
+    data_url = reverse("admin:oss_clarity_site_heatmap_data", args=[site.pk])
+    data = admin_client.get(data_url, {"path": "/pricing", "device": "mobile"}).json()
+    assert data["coverage"]["pageviews"] == 2
+    change = admin_client.get(reverse("admin:oss_clarity_site_change", args=[site.pk]))
+    assert reverse("admin:oss_clarity_site_heatmap", args=[site.pk]) in change.content.decode()
+
+
+def test_the_heatmap_page_says_when_there_is_no_data(admin_client, site):
+    page = admin_client.get(reverse("admin:oss_clarity_site_heatmap", args=[site.pk]))
+    assert "No heatmap data" in page.content.decode()

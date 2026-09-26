@@ -36,4 +36,12 @@
 - `manage.py oss_clarity_measure` reports how many signals each threshold setting would
   find, with moments to watch. It writes nothing.
 - Recordings can be deleted from the admin, stored chunks first.
+- Read-only JSON API (`oss_clarity.urls.api`): recordings filterable by any-of signals and
+  favourites, one recording with its pages, a page's events, heatmap pages, one heatmap,
+  and sessions with quick backs and loops on every row. Staff only unless
+  `API_PERMISSION` says otherwise.
+- Admin viewer: a replay on each recording's page, with signals on the timeline and as a
+  list, and a heatmap page per site (page, device and range pickers; click and scroll-depth
+  maps drawn over the newest recorded snapshot of that page). Built from `js/player` on
+  rrweb's replayer, sandboxed without scripts.
 

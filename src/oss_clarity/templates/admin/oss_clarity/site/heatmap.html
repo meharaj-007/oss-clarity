@@ -1,0 +1,61 @@
+{% extends "admin/base_site.html" %}
+{% load static %}
+
+{% block extrastyle %}{{ block.super }}<link rel="stylesheet" href="{% static 'oss_clarity/player.css' %}">{% endblock %}
+{% block extrahead %}{{ block.super }}<script src="{% static 'oss_clarity/player.js' %}" defer></script>{% endblock %}
+
+{% block breadcrumbs %}
+{% if oc_list_breadcrumbs %}
+<ol class="breadcrumbs">
+  <li><a href="{% url 'admin:index' %}">Home</a></li>
+  <li><a href="{% url 'admin:app_list' app_label=opts.app_label %}">{{ opts.app_config.verbose_name }}</a></li>
+  <li><a href="{% url 'admin:oss_clarity_site_changelist' %}">{{ opts.verbose_name_plural|capfirst }}</a></li>
+  <li><a href="{% url 'admin:oss_clarity_site_change' site_obj.pk %}">{{ site_obj }}</a></li>
+  <li aria-current="page">Heatmap</li>
+</ol>
+{% else %}
+<div class="breadcrumbs">
+  <a href="{% url 'admin:index' %}">Home</a>
+  &rsaquo; <a href="{% url 'admin:app_list' app_label=opts.app_label %}">{{ opts.app_config.verbose_name }}</a>
+  &rsaquo; <a href="{% url 'admin:oss_clarity_site_changelist' %}">{{ opts.verbose_name_plural|capfirst }}</a>
+  &rsaquo; <a href="{% url 'admin:oss_clarity_site_change' site_obj.pk %}">{{ site_obj }}</a>
+  &rsaquo; Heatmap
+</div>
+{% endif %}
+{% endblock %}
+
+{% block content %}
+<div id="content-main" class="oc-heatmap-page">
+  {% if pages %}
+    <form method="get" class="oc-heatmap-controls">
+      <label>Page
+        <select name="path">
+          {% for page in pages %}
+            <option value="{{ page.path }}"{% if page.path == path %} selected{% endif %}>{{ page.path }} ({{ page.pageviews }} views)</option>
+          {% endfor %}
+        </select>
+      </label>
+      <label>Device
+        <select name="device">
+          {% for value, label in devices %}
+            <option value="{{ value }}"{% if value == device %} selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <label>Last
+        <select name="days">
+          {% for choice in day_choices %}
+            <option value="{{ choice }}"{% if choice == days %} selected{% endif %}>{{ choice }} days</option>
+          {% endfor %}
+        </select>
+      </label>
+      <button type="submit" class="button">Show</button>
+    </form>
+    <div class="oc-heatmap" data-oss-clarity-heatmap="{{ data_url }}">
+      <p class="oc-loading">Loading the heatmap…</p>
+    </div>
+  {% else %}
+    <p>No heatmap data in the last {{ days }} days yet. Heatmaps are rebuilt every hour by the <code>heatmaps</code> job.</p>
+  {% endif %}
+</div>
+{% endblock %}

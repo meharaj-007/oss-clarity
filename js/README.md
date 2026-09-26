@@ -8,6 +8,7 @@ cd js
 npm ci          # exact versions from package-lock.json
 npm run build   # writes the bundle; commit the result
 npm run typecheck
+npm test        # the recorder's uploads, with rrweb stubbed out
 ```
 
 The build is deterministic: rebuilding from the lockfile must give a byte-identical

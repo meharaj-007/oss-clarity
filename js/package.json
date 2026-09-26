@@ -6,7 +6,8 @@
   "type": "module",
   "scripts": {
     "build": "node recorder/build.mjs",
-    "typecheck": "tsc --noEmit -p ."
+    "typecheck": "tsc --noEmit -p .",
+    "test": "node --test \"tests/*.test.mjs\""
   },
   "dependencies": {
     "@rrweb/record": "2.1.6",

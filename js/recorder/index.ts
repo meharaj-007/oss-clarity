@@ -12,8 +12,9 @@
  *     where the browser can, and POSTs them as text/plain;
  *   - stops at the session's byte and time caps, and pauses after IDLE_MS
  *     without interaction so a tab left open does not spend the budget;
- *   - flushes on `pagehide` with `keepalive`, which is why a chunk is kept
- *     under the 64 KB keepalive ceiling.
+ *   - flushes when the page is hidden or closed with `keepalive`, sending
+ *     at once and uncompressed, in parts under the 64 KB keepalive ceiling:
+ *     a page that is going away gets no further turn to finish compressing.
  *
  * Built by `npm run build` into src/oss_clarity/static/oss_clarity/recorder.js,
  * which is committed.
@@ -45,6 +46,9 @@ export type RecorderConfig = {
  * keepalive ceiling even before compression. */
 const FLUSH_MS = 5_000;
 const FLUSH_BYTES = 60_000;
+/** Browsers refuse a keepalive request once the document's keepalive bodies
+ * in flight pass 64 KiB. What is sent as the page goes away stays under this. */
+const KEEPALIVE_BYTES = 60_000;
 /** No interaction for this long and the recorder pauses; the next
  * interaction resumes it with a fresh snapshot. */
 const IDLE_MS = 5 * 60_000;
@@ -83,6 +87,7 @@ let stopped = false;
 let paused = false;
 let errorsThisPage = 0;
 let inflight = 0;
+let keepaliveBytes = 0;
 
 // ---------------------------------------------------------------------------
 // Masking
@@ -245,52 +250,102 @@ async function gzip(text: string): Promise<Uint8Array | null> {
   }
 }
 
-async function send(events: eventWithTime[], final: boolean, stopReason: string): Promise<void> {
-  if (!config || events.length === 0) return;
-  const seq = chunkSeq++;
-  const payload = JSON.stringify({
-    key: config.key,
-    session_id: config.sessionId,
-    visitor_id: config.visitorId,
-    page_id: config.pageId,
-    page_seq: config.pageSeq,
+function payloadFor(events: eventWithTime[], seq: number, final: boolean, stopReason: string): string {
+  const c = config as RecorderConfig;
+  return JSON.stringify({
+    key: c.key,
+    session_id: c.sessionId,
+    visitor_id: c.visitorId,
+    page_id: c.pageId,
+    page_seq: c.pageSeq,
     chunk_seq: seq,
     url: window.location.href,
     final,
     stop_reason: stopReason,
     events,
   });
+}
 
-  const headers: Record<string, string> = { "Content-Type": "text/plain" };
-  let body: BodyInit = payload;
-  // The last flush must survive the page closing, which only keepalive
-  // promises, and keepalive refuses bodies over 64 KB: compress first.
-  const compressed = await gzip(payload);
-  if (compressed) {
-    body = compressed as unknown as BodyInit;
-    headers["Content-Encoding"] = "gzip";
-  }
-  const size = typeof body === "string" ? body.length : (body as Uint8Array).byteLength;
-  const useKeepalive = final && size < 62_000;
+function utf8Length(text: string): number {
+  return new TextEncoder().encode(text).length;
+}
 
+function post(body: BodyInit, headers: Record<string, string>, keepalive: boolean, size: number): Promise<void> {
   inflight++;
+  if (keepalive) keepaliveBytes += size;
+  const done = () => {
+    inflight--;
+    if (keepalive) keepaliveBytes -= size;
+  };
   try {
-    await fetch(config.endpoint, {
+    return fetch(config!.endpoint, {
       method: "POST",
       body,
       headers,
       mode: "cors",
       credentials: "omit",
-      keepalive: useKeepalive,
-    });
+      keepalive,
+    }).then(done, done);
   } catch {
     /* blocked or offline: never surface it */
-  } finally {
-    inflight--;
+    done();
+    return Promise.resolve();
   }
 }
 
-function flush(final = false, stopReason = ""): void {
+/** While the page stays open: gzip where the browser can, then send. */
+async function send(events: eventWithTime[], final: boolean, stopReason: string): Promise<void> {
+  if (!config || events.length === 0) return;
+  const payload = payloadFor(events, chunkSeq++, final, stopReason);
+  const headers: Record<string, string> = { "Content-Type": "text/plain" };
+  let body: BodyInit = payload;
+  const compressed = await gzip(payload);
+  if (compressed) {
+    body = compressed as unknown as BodyInit;
+    headers["Content-Encoding"] = "gzip";
+  }
+  const size = typeof body === "string" ? utf8Length(body) : (body as Uint8Array).byteLength;
+  await post(body, headers, final && keepaliveBytes + size <= KEEPALIVE_BYTES, size);
+}
+
+/** Events in order, cut into runs whose JSON fits `limit` bytes. An event
+ * larger than `limit` travels alone. */
+function splitBySize<T>(events: T[], limit: number, measure: (event: T) => number): T[][] {
+  const parts: T[][] = [];
+  let part: T[] = [];
+  let size = 0;
+  for (const event of events) {
+    const bytes = measure(event) + 1;
+    if (part.length > 0 && size + bytes > limit) {
+      parts.push(part);
+      part = [];
+      size = 0;
+    }
+    part.push(event);
+    size += bytes;
+  }
+  if (part.length > 0) parts.push(part);
+  return parts;
+}
+
+/** The page is being hidden or closed and may get no further turn, so
+ * nothing here waits: every fetch starts before this returns. Compression is
+ * asynchronous, so the events go uncompressed, in parts that fit the keepalive
+ * budget. A part past the budget is sent without keepalive: it still arrives
+ * when the page was only hidden. */
+function sendNow(events: eventWithTime[], final: boolean, stopReason: string): void {
+  if (!config || events.length === 0) return;
+  const envelope = utf8Length(payloadFor([], chunkSeq, final, stopReason));
+  const parts = splitBySize(events, KEEPALIVE_BYTES - envelope, (event) => utf8Length(JSON.stringify(event)));
+  parts.forEach((part, index) => {
+    const last = index === parts.length - 1;
+    const body = payloadFor(part, chunkSeq++, final && last, last ? stopReason : "");
+    const size = utf8Length(body);
+    void post(body, { "Content-Type": "text/plain" }, keepaliveBytes + size <= KEEPALIVE_BYTES, size);
+  });
+}
+
+function flush(final = false, stopReason = "", leaving = false): void {
   if (flushTimer !== null) {
     window.clearTimeout(flushTimer);
     flushTimer = null;
@@ -298,7 +353,8 @@ function flush(final = false, stopReason = ""): void {
   const events = buffer;
   buffer = [];
   bufferBytes = 0;
-  void send(events, final, stopReason);
+  if (leaving) sendNow(events, final, stopReason);
+  else void send(events, final, stopReason);
 }
 
 function scheduleFlush(): void {
@@ -417,11 +473,12 @@ function start(next: RecorderConfig): void {
 }
 
 function onPageHide(): void {
-  flush(true, "");
+  flush(true, "", true);
 }
 
 function onVisibility(): void {
-  if (document.visibilityState === "hidden") flush();
+  // Often the last event a mobile browser fires before discarding the page.
+  if (document.visibilityState === "hidden") flush(false, "", true);
 }
 
 function stop(reason: string): void {

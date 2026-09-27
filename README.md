@@ -1,5 +1,8 @@
 # oss-clarity
 
+[![PyPI](https://img.shields.io/pypi/v/oss-clarity)](https://pypi.org/project/oss-clarity/)
+[![Python](https://img.shields.io/pypi/pyversions/oss-clarity)](https://pypi.org/project/oss-clarity/)
+
 Self-hosted session replay, heatmaps and rules-based behaviour signals for Django.
 
 Add one script tag to your site. oss-clarity counts page views, clicks and scroll

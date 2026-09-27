@@ -4,6 +4,7 @@
 [![PyPI](https://img.shields.io/pypi/v/oss-clarity)](https://pypi.org/project/oss-clarity/)
 [![Python](https://img.shields.io/pypi/pyversions/oss-clarity)](https://pypi.org/project/oss-clarity/)
 [![Django](https://img.shields.io/pypi/frameworkversions/django/oss-clarity)](https://pypi.org/project/oss-clarity/)
+[![License](https://img.shields.io/pypi/l/oss-clarity)](https://github.com/meharaj-007/oss-clarity/blob/main/LICENSE)
 
 Self-hosted session replay, heatmaps and rules-based behaviour signals for Django.
 

@@ -8,10 +8,10 @@ marks where people struggled: rage clicks, dead clicks, hesitations, form
 abandons and more. You watch the replays and heatmaps in your Django admin. Every
 byte stays on your servers.
 
-> Early release (0.1.1). Not yet published to PyPI: install from a GitHub tag.
+> Early release (0.1.2).
 > Settings and the JSON API may still change.
 
-![A replay in the Django admin, with signals on the timeline](docs/images/replay.png)
+![A replay in the Django admin, with signals on the timeline](https://raw.githubusercontent.com/meharaj-007/oss-clarity/v0.1.2/docs/images/replay.png)
 
 ## What you get
 
@@ -22,13 +22,13 @@ byte stays on your servers.
   anything is sent. Capped per visit by size, pages and minutes.
 - **Signals**: 15 rules, each a documented, deterministic check with named
   thresholds, and a tool to measure those thresholds against your own recordings.
-  See [signals](docs/signals.md).
+  See [signals](https://github.com/meharaj-007/oss-clarity/blob/v0.1.2/docs/signals.md).
 - **Heatmaps**: clicks and scroll depth per page and device, drawn over a recorded
   snapshot of the page.
 - **Viewer**: replay and heatmap pages inside Django admin, and a read-only
-  [JSON API](docs/api.md).
+  [JSON API](https://github.com/meharaj-007/oss-clarity/blob/v0.1.2/docs/api.md).
 
-![Clicks on a page, drawn over a recorded snapshot](docs/images/heatmap-clicks.png)
+![Clicks on a page, drawn over a recorded snapshot](https://raw.githubusercontent.com/meharaj-007/oss-clarity/v0.1.2/docs/images/heatmap-clicks.png)
 
 ## Privacy
 
@@ -56,11 +56,8 @@ byte stays on your servers.
 ## Install
 
 ```sh
-pip install "oss-clarity[django] @ git+https://github.com/meharaj-007/oss-clarity@v0.1.1"
+pip install "oss-clarity[django]"
 ```
-
-Or download the wheel from the
-[v0.1.1 release](https://github.com/meharaj-007/oss-clarity/releases/tag/v0.1.1).
 
 Python 3.11 to 3.14, Django 5.2, 6.0 and 6.1, SQLite or PostgreSQL.
 
@@ -80,7 +77,7 @@ MIDDLEWARE = [
 The middleware is only needed if something else in your stack (django-cors-headers,
 a no-store cache policy) would override the public endpoints' headers. It is safe
 to always include. Every other setting has a default; see
-[settings](docs/settings.md).
+[settings](https://github.com/meharaj-007/oss-clarity/blob/v0.1.2/docs/settings.md).
 
 **2. URLs**
 
@@ -94,7 +91,8 @@ urlpatterns = [
 
 Then `python manage.py migrate`.
 
-**3. Jobs**, every five minutes from cron (or use the [Celery tasks](docs/jobs.md)):
+**3. Jobs**, every five minutes from cron (or use the
+[Celery tasks](https://github.com/meharaj-007/oss-clarity/blob/v0.1.2/docs/jobs.md)):
 
 ```cron
 */5 * * * *  cd /srv/app && python manage.py oss_clarity_run_jobs
@@ -112,17 +110,17 @@ Visits appear as hits straight away. Recordings are analysed a few minutes after
 visit ends, and heatmaps update hourly.
 
 To see it all working on your own machine first, run the
-[example project](example/README.md).
+[example project](https://github.com/meharaj-007/oss-clarity/blob/v0.1.2/example/README.md).
 
 ## Documentation
 
-- [Signals](docs/signals.md): what each one means
-- [Thresholds](docs/thresholds.md): the numbers, and how to measure them
-- [Settings](docs/settings.md): every key
-- [Storage](docs/storage.md): local disk or S3
-- [Jobs](docs/jobs.md): cron or Celery
-- [JSON API](docs/api.md)
-- [Upgrading](docs/upgrading.md)
+- [Signals](https://github.com/meharaj-007/oss-clarity/blob/v0.1.2/docs/signals.md): what each one means
+- [Thresholds](https://github.com/meharaj-007/oss-clarity/blob/v0.1.2/docs/thresholds.md): the numbers, and how to measure them
+- [Settings](https://github.com/meharaj-007/oss-clarity/blob/v0.1.2/docs/settings.md): every key
+- [Storage](https://github.com/meharaj-007/oss-clarity/blob/v0.1.2/docs/storage.md): local disk or S3
+- [Jobs](https://github.com/meharaj-007/oss-clarity/blob/v0.1.2/docs/jobs.md): cron or Celery
+- [JSON API](https://github.com/meharaj-007/oss-clarity/blob/v0.1.2/docs/api.md)
+- [Upgrading](https://github.com/meharaj-007/oss-clarity/blob/v0.1.2/docs/upgrading.md)
 
 ## Limits
 
@@ -147,5 +145,6 @@ cd js && npm ci && npm run typecheck && npm run build   # rebuilds the committed
 
 ## Licence
 
-MIT. See [LICENSE](LICENSE). The bundled rrweb and its dependencies are listed in
-[THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+MIT. See [LICENSE](https://github.com/meharaj-007/oss-clarity/blob/v0.1.2/LICENSE).
+The bundled rrweb and its dependencies are listed in
+[THIRD_PARTY_NOTICES.md](https://github.com/meharaj-007/oss-clarity/blob/v0.1.2/THIRD_PARTY_NOTICES.md).

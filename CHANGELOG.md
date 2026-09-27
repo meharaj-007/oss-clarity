@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.1.2 — 2026-09-27
+
+First release on PyPI.
+
+Changed
+
+- The README installs from PyPI, and its links and images point at the v0.1.2 tag on GitHub,
+  so they work on the PyPI project page.
+
 ## 0.1.1 — 2026-09-26
 
 Fixed

@@ -2,6 +2,7 @@
 
 [![PyPI](https://img.shields.io/pypi/v/oss-clarity)](https://pypi.org/project/oss-clarity/)
 [![Python](https://img.shields.io/pypi/pyversions/oss-clarity)](https://pypi.org/project/oss-clarity/)
+[![Django](https://img.shields.io/pypi/frameworkversions/django/oss-clarity)](https://pypi.org/project/oss-clarity/)
 
 Self-hosted session replay, heatmaps and rules-based behaviour signals for Django.
 

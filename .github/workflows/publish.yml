@@ -1,0 +1,45 @@
+name: Publish
+
+# Pushing a version tag (v0.1.2) builds the release and uploads it to PyPI through a
+# trusted publisher: no API token is stored anywhere.
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: The tag matches the package version
+        run: |
+          version=$(python -c "import re; print(re.search(r'__version__ = \"(.+)\"', open('src/oss_clarity/__init__.py').read())[1])")
+          [ "v$version" = "$GITHUB_REF_NAME" ] || { echo "tag $GITHUB_REF_NAME, version $version"; exit 1; }
+      - run: pip install build
+      - run: python -m build
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    # Must match the environment on the PyPI trusted publisher.
+    environment:
+      name: pypi
+      url: https://pypi.org/p/oss-clarity
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+      - uses: pypa/gh-action-pypi-publish@release/v1

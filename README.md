@@ -1,5 +1,6 @@
 # oss-clarity
 
+[![CI](https://github.com/meharaj-007/oss-clarity/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/meharaj-007/oss-clarity/actions/workflows/ci.yml)
 [![PyPI](https://img.shields.io/pypi/v/oss-clarity)](https://pypi.org/project/oss-clarity/)
 [![Python](https://img.shields.io/pypi/pyversions/oss-clarity)](https://pypi.org/project/oss-clarity/)
 [![Django](https://img.shields.io/pypi/frameworkversions/django/oss-clarity)](https://pypi.org/project/oss-clarity/)
